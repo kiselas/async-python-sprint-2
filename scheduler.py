@@ -7,8 +7,8 @@ from typing import Dict, Iterator, List
 from exceptions import StopEventLoop, TaskError
 from job import Job
 from logger import logger
-from settings import CONDITION_CACHE, POOL_SIZE, QUEUED_TASKS_DIR, RUNNING_TASKS_DIR, SCHEDULER_DATA, DONE_TASKS
-from utils import delete_files_in_dir, get_pickled_tasks, check_tasks_is_completed
+from settings import CONDITION_CACHE, DONE_TASKS, POOL_SIZE, QUEUED_TASKS_DIR, RUNNING_TASKS_DIR, SCHEDULER_DATA
+from utils import check_tasks_is_completed, delete_files_in_dir, get_pickled_tasks
 
 
 class Scheduler:
@@ -24,10 +24,10 @@ class Scheduler:
             self.create_done_list()
 
     def init_from_file(self):
-        logger.info("Начинаем инициализацию из файла}")
+        logger.info("Start init from file}")
         self.tasks = get_pickled_tasks(from_dir=QUEUED_TASKS_DIR)
         self.running_tasks = get_pickled_tasks(from_dir=RUNNING_TASKS_DIR)
-        logger.info("Инициализация из файла успешна")
+        logger.info("Init successfull")
         logger.debug(f"tasks: {self.tasks}")
         logger.debug(f"running_tasks: {self.running_tasks}")
 
@@ -36,9 +36,9 @@ class Scheduler:
         try:
             os.makedirs(QUEUED_TASKS_DIR, exist_ok=True)
             os.makedirs(RUNNING_TASKS_DIR, exist_ok=True)
-            logger.info("Необходимые директории созданы или уже существуют.")
+            logger.info("All needed dirs exists")
         except PermissionError:
-            logger.error("Недостаточно прав для создания необходимых директорий", exc_info=True)
+            logger.error("No permissions to create directories", exc_info=True)
 
     def schedule(self, task):
         self.tasks.append(task)
@@ -49,12 +49,12 @@ class Scheduler:
                 for _ in range(min(POOL_SIZE, len(self.tasks))):
                     task: Job = self.tasks.pop(0)
                     if task.start_at and task.start_at > datetime.now():
-                        logger.info(f"Запланированное время выполнения {task} таски еще не наступило, ждём")
+                        logger.info(f"The scheduled execution time of the {task} task has not yet arrived, waiting")
                         self.tasks.append(task)
                         continue
 
                     if not check_tasks_is_completed(task.dependencies):
-                        logger.info(f"Не все зависимости {task} выполнены, ждём")
+                        logger.info(f"Not all {task} dependencies are met, waiting")
                         self.tasks.append(task)
                         continue
 
@@ -106,13 +106,13 @@ class Scheduler:
 
                 time.sleep(1)  # для более наглядной проверки
 
-            logger.info("Все задачи выполнены, провожу уборку ненужных файлов!")
+            logger.info("All tasks done. Start clean up")
             self.clean_up()
         except StopEventLoop:
-            logger.info("Получен сигнал остановки из кэш-файла")
+            logger.info("Get signal to stop from file")
             self.stop()
         except KeyboardInterrupt:
-            logger.info("Получен сигнал остановки KeyboardInterrupt")
+            logger.info("Get stop signal from KeyboardInterrupt")
             self.stop()
 
     def restart(self):
@@ -132,19 +132,19 @@ class Scheduler:
             os.remove(SCHEDULER_DATA)
 
     def create_done_list(self):
-        logger.info("Cоздан файл для записи выполненных задач")
-        with open(DONE_TASKS, "w") as file:
+        logger.info("Created file for done tasks")
+        with open(DONE_TASKS, "w"):
             pass
 
 
     def stop(self, save_data=True) -> None:
         for task in self.tasks:
             task.stop(save_data=save_data, running=False)
-        logger.info("Список задач сохранен")
+        logger.info("List of tasks saved")
 
         for running_task in self.running_tasks:
             self.tasks_mapping[running_task].stop(save_data=save_data, running=True)
-        logger.info("Список запущенных задач сохранен")
+        logger.info("List of running tasks saved")
 
         with open(SCHEDULER_DATA, "w") as file:
             scheduler_data = {
@@ -159,9 +159,8 @@ class Scheduler:
         if os.path.isfile(SCHEDULER_DATA):
             print(f"Файл {SCHEDULER_DATA} существует.")
             return True
-        else:
-            print(f"Файл {SCHEDULER_DATA} не существует.")
-            return False
+        print(f"Файл {SCHEDULER_DATA} не существует.")
+        return False
 
     @staticmethod
     def is_running() -> bool:
@@ -170,8 +169,8 @@ class Scheduler:
             with open(CONDITION_CACHE) as file:
                 condition_cache = json.load(file)
                 return condition_cache["is_running"]
-        else:
-            with open(CONDITION_CACHE, "w") as file:
-                condition = {"is_running": True}
-                json.dump(condition, file)
-                return True
+
+        with open(CONDITION_CACHE, "w") as file:
+            condition = {"is_running": True}
+            json.dump(condition, file)
+            return True

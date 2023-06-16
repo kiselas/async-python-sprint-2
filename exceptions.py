@@ -5,7 +5,3 @@ class StopEventLoop(Exception):
 
 class TaskError(Exception):
     pass
-
-
-class DependenciesNotReady(Exception):
-    pass

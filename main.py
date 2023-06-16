@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 import requests
 
 from exceptions import TaskError
-from job import Job, check_dependencies
+from job import Job
 from logger import logger
 from scheduler import Scheduler
 
@@ -20,7 +20,6 @@ class TestTask(Job):
         self.second_stage = None
         self.third_stage = None
 
-    @check_dependencies
     def run(self):
         try:
             if not self.first_stage:
@@ -45,12 +44,12 @@ class TestTask(Job):
                 yield self
                 self.third_stage = "third_stage"
         except TypeError:
-            logger.info("Ошибка TypeError, нужно заретраить")
+            logger.info("Error TypeError, retrying")
             yield self, TaskError
 
     def reset(self):
         """Необходимо реализовать сброс состояния для ретраев"""
-        logger.info("Сбрасываем данные об этапах")
+        logger.info("Reset stages data")
         self.first_stage = None
         self.second_stage = None
         self.third_stage = None
@@ -66,7 +65,7 @@ class CreateNewDirsTask(Job):
         if self.new_dirs:
             new_dir = self.new_dirs.pop()
             os.makedirs(new_dir, exist_ok=True)
-            logger.info(f"Создана папка: {new_dir}")
+            logger.info(f"Dir created: {new_dir}")
             yield self
 
     def reset(self):
@@ -84,7 +83,7 @@ class CreateNewFilesTask(Job):
             file_path = f"{self.dirs_to_create_file.pop()}/testfile.txt"
             with open(file_path, "w"):
                 pass  # Создаем пустой файл
-            logger.info(f"Создан файл: {file_path}")
+            logger.info(f"File created: {file_path}")
             yield self
 
     def reset(self):
@@ -108,37 +107,38 @@ class SaveWebPagesTask(Job):
             filename = f"{hostname}_{timestamp}.txt"
             with open(filename, "wb") as file:
                 file.write(response.content)
-            logger.info(f"Создан файл: {filename}")
+            logger.info(f"File created: {filename}")
             yield self
 
     def reset(self):
         self.urls = copy(self.urls_dump)
 
 
-current_time = datetime.now()
-start_time = current_time + timedelta(minutes=1)
+if __name__ == "__main__":
+    current_time = datetime.now()
+    start_time = current_time + timedelta(minutes=1)
 
-new_dirs = [
-    "./test1/",
-    "./test2/",
-    "./test3/",
-    "./test4/",
-    "./test5/",
-]
-urls = [
-    "https://music.yandex.ru/home",
-    "https://habr.com/ru/feed/",
-    "https://dzen.ru/",
-    "https://ya.ru",
-]
+    new_dirs = [
+        "./test1/",
+        "./test2/",
+        "./test3/",
+        "./test4/",
+        "./test5/",
+    ]
+    urls = [
+        "https://music.yandex.ru/home",
+        "https://habr.com/ru/feed/",
+        "https://dzen.ru/",
+        "https://ya.ru",
+    ]
 
-test_task = TestTask(max_tries=3)
-create_dirs_task = CreateNewDirsTask(max_tries=3, new_dirs=new_dirs)
-save_files_task = CreateNewFilesTask(max_tries=3, dirs_to_create_file=new_dirs, dependencies=[create_dirs_task])
-save_web_pages_task = SaveWebPagesTask(max_tries=3, dependencies=[save_files_task], urls=urls)
+    test_task = TestTask(max_tries=3)
+    create_dirs_task = CreateNewDirsTask(max_tries=3, new_dirs=new_dirs)
+    save_files_task = CreateNewFilesTask(max_tries=3, dirs_to_create_file=new_dirs, dependencies=[create_dirs_task])
+    save_web_pages_task = SaveWebPagesTask(max_tries=3, dependencies=[save_files_task], urls=urls)
 
-scheduler = Scheduler()
-scheduler.schedule(create_dirs_task)
-scheduler.schedule(save_files_task)
-scheduler.schedule(save_web_pages_task)
-scheduler.run()
+    scheduler = Scheduler()
+    scheduler.schedule(create_dirs_task)
+    scheduler.schedule(save_files_task)
+    scheduler.schedule(save_web_pages_task)
+    scheduler.run()

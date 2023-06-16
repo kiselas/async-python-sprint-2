@@ -35,7 +35,7 @@ class TestJob(Job):
                 yield self, None
                 self.second_stage = "second_stage 4"
         except TypeError:
-            logger.info("Ошибка TypeError, нужно заретраить")
+            logger.info("Error TypeError, retrying")
             yield self, TaskError
 
     def test_method(self):
@@ -43,7 +43,7 @@ class TestJob(Job):
 
     def reset(self):
         """Необходимо реализовать сброс состояния для ретраев"""
-        logger.info("Сбрасываем данные об этапах")
+        logger.info("Reset stages data")
         self.first_stage = None
         self.second_stage = None
 

@@ -13,7 +13,7 @@ def get_pickled_tasks(from_dir):
         with open(file_path, "rb") as file:
             obj = pickle.load(file)
             objects.append(iter(obj))
-    logger.info(f"Восстановлено {len(objects)} из директории {from_dir}")
+    logger.info(f"Restore {len(objects)} objects from dir {from_dir}")
     return objects
 
 
@@ -38,6 +38,6 @@ def check_tasks_is_completed(dependencies: List):
         return True
     task_statuses = []
     for dependency in dependencies:
-        with open(DONE_TASKS, 'r') as file:
+        with open(DONE_TASKS) as file:
             task_statuses.append(any(line.strip() == dependency.unique_name for line in file))
     return all(task_statuses)

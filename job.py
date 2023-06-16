@@ -2,10 +2,8 @@ import pickle
 import uuid
 from datetime import datetime
 
-from exceptions import DependenciesNotReady
 from logger import logger
 from settings import DONE_TASKS, QUEUED_TASKS_DIR, RUNNING_TASKS_DIR
-from utils import check_task_in_completed
 
 
 class Job:
@@ -32,16 +30,16 @@ class Job:
     def stop(self, save_data, running) -> None:
         """Штатная остановка с сохранением всех нужных данных"""
         if not save_data:
-            logger.info(f"Выход без сохранения {self.unique_name}")
+            logger.info(f"Exit without saving {self.unique_name}")
             return
         if running:
             path_to_save = f"{RUNNING_TASKS_DIR}{self.unique_name}.pkl"
         else:
             path_to_save = f"{QUEUED_TASKS_DIR}{self.unique_name}.pkl"
-        logger.info(f"Сохраняем данные по задаче  {self.unique_name}")
+        logger.info(f"Saving data for task  {self.unique_name}")
         with open(path_to_save, "wb") as file:
             pickle.dump(self, file)
-        logger.info(f"Усппешно сохранены данные по задаче {self.unique_name}")
+        logger.info(f"Successfully save data for task {self.unique_name}")
 
     @property
     def is_expired(self) -> bool:
@@ -55,6 +53,6 @@ class Job:
 
     def save_to_done(self) -> None:
         """Сохраняет идентификатор задачи в текстовый файл с выполненными задачами"""
-        logger.info("Добавлено в выполненные задачи")
+        logger.info("Add to done tasks")
         with open(DONE_TASKS, "a") as file:
             file.write(self.unique_name + "\n")
